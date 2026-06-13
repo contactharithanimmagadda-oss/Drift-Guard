@@ -1,0 +1,28 @@
+# ── Core ML ──────────────────────────────────────────────────
+faiss-cpu>=1.9.0                # 1.7.4 does not exist on Windows/Python 3.13+
+scikit-learn>=1.3.0
+shap>=0.44.0                    # unpinned — 0.44.0 wheel missing on Py3.13
+scipy>=1.11.0
+numpy>=1.24.0,<2.0.0            # shap + faiss work best with numpy <2
+pandas>=2.0.0
+joblib>=1.3.0
+
+# ── RAG + Embeddings ─────────────────────────────────────────
+sentence-transformers>=2.6.0
+langchain==0.2.16
+langchain-core==0.2.38
+langchain-groq==0.1.9
+
+# ── LLM ──────────────────────────────────────────────────────
+groq>=0.9.0
+
+# ── UI + Serving ─────────────────────────────────────────────
+streamlit>=1.35.0
+pyngrok>=7.0.0
+
+# ── Experiment tracking ───────────────────────────────────────
+mlflow>=2.14.0
+
+# ── Utilities ────────────────────────────────────────────────
+python-dotenv>=1.0.0
+pytest>=8.0.0

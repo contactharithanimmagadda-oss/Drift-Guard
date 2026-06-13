@@ -1,0 +1,38 @@
+# Environment
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# DriftGuard generated files
+mlruns/
+indexes/
+*.faiss
+*.pkl
+.ngrok_url
+
+# Data — companies provide their own
+data/baseline.csv
+data/production.csv
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Distribution archives and documents — not source code
+*.zip
+*.tar.gz
+*.docx
+*.xlsx
+*.html
+# Shell convenience scripts — local only
+run.sh
+setup.sh
