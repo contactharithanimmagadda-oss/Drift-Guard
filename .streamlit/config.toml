@@ -1,0 +1,13 @@
+[server]
+# Disables Streamlit's module path scanner that tries to introspect every
+# loaded Python module (including hundreds of vision models inside
+# `transformers` that require `torchvision`). Without this, the terminal
+# fills with "No module named 'torchvision'" errors on every page load.
+# Trade-off: you must manually restart Streamlit after code changes
+# (Ctrl+C → streamlit run src/app.py). YAML/config changes always required a
+# restart anyway since Streamlit never watched non-Python files.
+fileWatcherType = "none"
+
+[browser]
+# Suppress the "You can now view your Streamlit app" network URL line
+gatherUsageStats = false

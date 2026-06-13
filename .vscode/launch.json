@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DriftGuard — Streamlit (SteelGuard example)",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "src/app.py", "--server.port", "8501"],
+      "env": {
+        "DRIFTGUARD_CONFIG": "examples/steelguard/driftguard.yaml",
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "DriftGuard — Streamlit (your config)",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "src/app.py", "--server.port", "8501"],
+      "env": {
+        "DRIFTGUARD_CONFIG": "driftguard.yaml",
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Run Tests",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/", "-v"],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}
