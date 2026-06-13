@@ -1,0 +1,119 @@
+{
+  "version": "v1.1",
+  "source": "SteelGuard_ERP_v3.3",
+  "created": "2024-03-15",
+  "pipeline_version": "etl_v1.0",
+  "description": "ERP v3.3 upgrade \u2014 BREAKING: operator_shift changed to string",
+  "fields": {
+    "surface_roughness_um": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "\u00b5m",
+      "sensor": "Keyence_LJ-X8400",
+      "normal_range": [
+        2.5,
+        4.0
+      ]
+    },
+    "weld_depth_mm": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "mm",
+      "sensor": "UT-2000",
+      "normal_range": [
+        4.0,
+        5.0
+      ]
+    },
+    "wall_thickness_mm": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "mm",
+      "sensor": "digital_caliper",
+      "normal_range": [
+        7.9,
+        8.5
+      ]
+    },
+    "tensile_strength_mpa": {
+      "dtype": "float64",
+      "nullable": true,
+      "unit": "MPa",
+      "sensor": "tensile_test",
+      "note": "1% destructive sample"
+    },
+    "temp_at_weld_celsius": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "\u00b0C",
+      "sensor": "Raytek_Marathon",
+      "normal_range": [
+        1100,
+        1250
+      ]
+    },
+    "pressure_test_bar": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "bar",
+      "sensor": "hydro_test_rig",
+      "normal_range": [
+        75,
+        95
+      ]
+    },
+    "cycle_time_seconds": {
+      "dtype": "float64",
+      "nullable": false,
+      "unit": "s",
+      "source": "Siemens_S7-1500",
+      "normal_range": [
+        120,
+        170
+      ]
+    },
+    "operator_shift": {
+      "dtype": "object",
+      "nullable": false,
+      "values": "morning|afternoon|night",
+      "source": "ERP_v3.3",
+      "migration_note": "BREAKING CHANGE from v1.0. ETL adapter required. Ticket ETL-2024-0312."
+    },
+    "roughness_weld_ratio": {
+      "dtype": "float64",
+      "nullable": false,
+      "engineered": true,
+      "formula": "surface_roughness_um/weld_depth_mm"
+    },
+    "thickness_deviation": {
+      "dtype": "float64",
+      "nullable": false,
+      "engineered": true,
+      "formula": "|wall_thickness_mm-8.20|"
+    },
+    "weld_temp_deviation": {
+      "dtype": "float64",
+      "nullable": false,
+      "engineered": true,
+      "formula": "|temp_at_weld_celsius-1180|"
+    },
+    "is_night_shift": {
+      "dtype": "int64",
+      "nullable": false,
+      "engineered": true,
+      "formula": "1 if operator_shift==3 else 0"
+    },
+    "defect": {
+      "dtype": "int64",
+      "nullable": false,
+      "values": "0=ok|1=defective",
+      "target": true
+    },
+    "batch_size_units": {
+      "dtype": "int64",
+      "nullable": true,
+      "note": "New field added in ERP v3.3 upgrade",
+      "source": "ERP_v3.3"
+    }
+  }
+}

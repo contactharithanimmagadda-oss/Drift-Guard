@@ -1,0 +1,64 @@
+SteelGuard GmbH — Data Pipeline & Infrastructure Changelog
+================================================================
+Maintained by: data-engineering@steelguard.de
+Last updated:  2024-05-01
+
+2024-01-01 DEPLOY
+  SteelGuard DefectClassifier v1.0 deployed to LINE-A, LINE-B, LINE-C.
+  Training data: 5000 pipes (Jan–Jun 2024). Features: 12 (8 sensor + 4 engineered).
+  Baseline accuracy: 90.01%. AUC-ROC: 0.6584.
+  MLflow run: 38639d1fda494b66...
+  ETL pipeline: etl_v1.0. Schema: SteelGuard_ERP_v3.2 (schema_v1.0.json).
+
+2024-01-15 INFRA
+  MLflow server deployed at http://mlflow.steelguard.internal:5000.
+  Model registry activated. Experiment: SteelGuard_DefectClassifier.
+  Model v1.0 registered. 2 runs logged.
+
+2024-02-10 MAINTENANCE — ⚠ SENSOR RECALIBRATION
+  Keyence LJ-X8400 laser profilometer on LINE-B recalibrated.
+  Ticket: MAINT-2024-0089. Technician: Klaus Weber.
+  Previous offset: +0.2µm. New offset: +1.8µm. Delta: +1.6µm.
+  EXCEEDS 0.5µm threshold from runbook §4.2.
+  Affected feature: surface_roughness_um.
+  ACTION REQUIRED: Model re-evaluation per runbook §4.2.
+  STATUS: No model retrain triggered (oversight — escalated to ml-ops).
+
+2024-03-01 DEPLOY
+  Model v2.0 deployed to all production lines.
+  Improvement: recall +0.032 (threshold lowered to 0.35).
+  MLflow run: 937876219a4a46f6...
+  Rationale: reduce missed defects in high-pressure quality audit period.
+
+2024-03-15 SCHEMA — ⚠ BREAKING CHANGE
+  SteelGuard ERP upgraded from v3.2 to v3.3.
+  BREAKING CHANGE: operator_shift column encoding changed.
+    Before (v3.2): INT (1=morning, 2=afternoon, 3=night)
+    After  (v3.3): VARCHAR (morning, afternoon, night)
+  ETL pipeline version: etl_v1.0 (NOT updated — still expects v3.2 schema).
+  Migration adapter: NOT deployed. Ticket: ETL-2024-0312.
+  IMPACT: ETL pipeline receives object/VARCHAR but casts to float → NaN for all rows.
+  operator_shift and is_night_shift will be 100% NaN until adapter deployed.
+  Owner: data-engineering@steelguard.de. Priority: HIGH.
+
+2024-04-01 PRODUCT — ⚠ NEW ALLOY
+  New alloy grade X400 approved for production.
+  X400 physical properties: tensile_strength 650–720 MPa (vs X52/X60/X65: 480–550 MPa).
+  X400 process requirements: weld temp 1260–1310°C (vs standard 1150–1210°C).
+  X400 cycle time: 160–180s (vs standard 130–155s).
+  CRITICAL: Current model v2.0 was NOT trained on any X400 samples.
+  All X400 features are OUT OF DISTRIBUTION for the current model.
+  Manual QA mandatory for all X400 pipes until model retrained.
+  Owner: product@steelguard.de + ml-ops@steelguard.de.
+
+2024-04-20 INFRA
+  Production line speed reduced by 22% — scheduled maintenance window.
+  Expected duration: 4–6 weeks. Affects: temp_at_weld_celsius, pressure_test_bar, cycle_time_seconds.
+  Note: Lower weld temps (targeting 1040–1080°C range) may stress model predictions.
+  Model was trained on temp range 1110–1250°C.
+
+2024-05-01 AUDIT
+  Monthly model performance review completed.
+  Model v2.0 rolling 7-day accuracy: 91.4%. Within SLA (>88%).
+  PSI weekly scan: all features below 0.10 except cycle_time_seconds (0.13, warn).
+  No drift intervention triggered.

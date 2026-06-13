@@ -1,0 +1,66 @@
+SteelGuard DefectClassifier — Model Documentation
+===================================================
+Current Version: v2.0 | Training Date: 2024-03-01
+Owner: ml-ops@steelguard.de | MLflow: SteelGuard_DefectClassifier experiment
+
+## Production Deployment
+Deployed on: LINE-A, LINE-B, LINE-C
+Decision threshold: 0.35 (lower threshold = higher recall = catches more defects)
+Serving format: joblib pkl + StandardScaler pkl
+MLflow registry: SteelGuard_DefectClassifier (2 registered versions)
+
+## Features (12 total)
+
+### Raw Sensor Features (8)
+1. surface_roughness_um    Laser profilometer (Keyence LJ-X8400). Normal: 2.5–4.0 µm.
+                           TRAINING MEAN: 3.20 µm, STD: 0.40 µm
+                           SHAP importance rank: #1 (most important)
+
+2. weld_depth_mm           Ultrasonic weld depth (UT-2000). Normal: 4.0–5.0 mm.
+                           TRAINING MEAN: 4.50 mm, STD: 0.30 mm
+                           SHAP importance rank: #2
+
+3. wall_thickness_mm       Digital caliper. Nominal: 8.20 mm ±0.3mm.
+                           TRAINING MEAN: 8.20 mm, STD: 0.15 mm
+                           SHAP importance rank: #3
+
+4. tensile_strength_mpa    Destructive test (1% sample). Normal: 480–560 MPa.
+                           TRAINING MEAN: 520 MPa, STD: 18 MPa
+                           SHAP importance rank: #5
+
+5. temp_at_weld_celsius    Pyrometer (Raytek Marathon). Normal: 1150–1210°C.
+                           TRAINING MEAN: 1180°C, STD: 25°C
+                           SHAP importance rank: #6
+
+6. pressure_test_bar       Hydrostatic test rig. Normal: 75–95 bar.
+                           TRAINING MEAN: 85.0 bar, STD: 4.0 bar
+                           SHAP importance rank: #7
+
+7. cycle_time_seconds      Siemens S7-1500 PLC timer. Normal: 120–165s.
+                           TRAINING MEAN: 142s, STD: 8s
+                           SHAP importance rank: #4
+
+8. operator_shift          ERP encoding. TRAINING ENCODING: INT (1=morning,2=afternoon,3=night)
+                           WARNING: ERP v3.3 changed to VARCHAR. ETL adapter pending.
+                           SHAP importance rank: #8
+
+### Engineered Features (4)
+9.  roughness_weld_ratio   = surface_roughness_um / weld_depth_mm
+10. thickness_deviation    = |wall_thickness_mm - 8.20|
+11. weld_temp_deviation    = |temp_at_weld_celsius - 1180|
+12. is_night_shift         = 1 if operator_shift == 3 else 0
+
+## Model Performance
+                   v1.0         v2.0 (current)
+AUC-ROC:      0.6584         0.6255
+Accuracy:     0.9001         0.888
+Precision:    0.1429         0.16
+Recall:       0.0106         0.0426
+F1-score:     0.0198         0.0672
+
+## Known Limitations
+1. NOT trained on X400 alloy grade — all X400 predictions are unreliable
+2. operator_shift encoded as INT — breaks if ERP sends VARCHAR (ERP v3.3 issue)
+3. Trained on normal production speed — slowdown distributions not represented
+4. Seasonal variation not captured (Jan–Jun 2024 training window only)
+5. tensile_strength_mpa is partially interpolated (1% direct measurement)

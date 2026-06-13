@@ -1,0 +1,102 @@
+# ┌─────────────────────────────────────────────────────────┐
+# │  examples/steelguard/driftguard.yaml                   │
+# │                                                         │
+# │  Reference implementation — SteelGuard GmbH            │
+# │  Manufacturing defect classifier, Dortmund Germany      │
+# │                                                         │
+# │  Use this as your template when integrating DriftGuard  │
+# │  with your own ML system.                               │
+# └─────────────────────────────────────────────────────────┘
+
+project:
+  name:        "SteelGuard GmbH"
+  model_name:  "DefectClassifier v2.0"
+  model_type:  "binary_classifier"
+  domain:      "Manufacturing"
+  description: "Steel pipe defect detection across LINE-A, LINE-B, LINE-C"
+
+data:
+  label_col: "defect"
+  feature_cols:
+    - surface_roughness_um
+    - weld_depth_mm
+    - wall_thickness_mm
+    - tensile_strength_mpa
+    - temp_at_weld_celsius
+    - pressure_test_bar
+    - cycle_time_seconds
+    - operator_shift
+    - roughness_weld_ratio
+    - thickness_deviation
+    - weld_temp_deviation
+    - is_night_shift
+  baseline_path:   "data/scenarios/{id}/baseline.csv"  # {id} replaced by selected scenario
+  production_path: "data/scenarios/{id}/production.csv"
+  schemas_dir:     "data/schemas"
+
+scenarios:
+  - id:             sensor_recal
+    label:          "Sensor Recalibration"
+    description:    "Keyence LJ-X8400 laser recalibrated 2024-02-10. Offset +0.2µm→+1.8µm. surface_roughness_um mean shifted 3.2→4.8 µm."
+    acc_baseline:   0.888
+    acc_production: 0.714
+    baseline_path:   "data/scenarios/sensor_recal/baseline.csv"
+    production_path: "data/scenarios/sensor_recal/production.csv"
+
+  - id:             concept_drift
+    label:          "Concept Drift — X400 Alloy"
+    description:    "New X400 alloy introduced 2024-04-01. 9 features show bimodal distributions — model never trained on X400."
+    acc_baseline:   0.888
+    acc_production: 0.631
+    baseline_path:   "data/scenarios/concept_drift/baseline.csv"
+    production_path: "data/scenarios/concept_drift/production.csv"
+
+  - id:             etl_schema
+    label:          "ETL Schema Change"
+    description:    "ERP v3.3 changed operator_shift INT→VARCHAR on 2024-03-15. ETL adapter not deployed → 100% NaN injected."
+    acc_baseline:   0.888
+    acc_production: 0.510
+    baseline_path:   "data/scenarios/etl_schema/baseline.csv"
+    production_path: "data/scenarios/etl_schema/production.csv"
+
+  - id:             data_volume
+    label:          "Production Slowdown"
+    description:    "Line speed reduced 22% from 2024-04-20. temp_at_weld_celsius, pressure_test_bar, cycle_time_seconds shifted outside training range."
+    acc_baseline:   0.888
+    acc_production: 0.742
+    baseline_path:   "data/scenarios/data_volume/baseline.csv"
+    production_path: "data/scenarios/data_volume/production.csv"
+
+agent:
+  role_description: "an ML Operations expert for {project_name}"
+  task_description: >
+    Investigate why {model_name} has degraded in production
+    and produce a structured root cause analysis with a concrete remediation plan.
+  investigation_hint: >
+    The model predicts steel pipe defects (label: {label_col}).
+    Focus on sensor data drift, ETL pipeline changes, and new material grades.
+  max_iterations: 15
+  routing_model:   "llama-3.1-8b-instant"       # ⚡ fast, free tier friendly
+  synthesis_model: "llama-3.3-70b-versatile"    # 🎯 best quality for root cause synthesis
+  max_tokens: 1024
+
+knowledge:
+  lineage_docs:  "knowledge/lineage"
+  runbook_docs:  "knowledge/runbooks"
+  model_docs:    "knowledge/model_meta"
+  indexes_dir:   "indexes"
+
+monitoring:
+  psi_critical:            0.20
+  psi_warn:                0.10
+  accuracy_sla:            0.88
+  shap_collapse_threshold: -20.0
+
+mlflow:
+  experiment_name: "SteelGuard_DriftMonitoring"
+  tracking_uri:    null
+
+ui:
+  page_title:   "DriftGuard — SteelGuard RCA"
+  sidebar_logo: null
+  accent_color: "#f59e0b"
