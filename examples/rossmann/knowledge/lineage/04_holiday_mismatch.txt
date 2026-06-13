@@ -1,0 +1,42 @@
+Rossmann Sales Forecaster v3.1 — Lineage Event: Holiday Calendar Encoding Mismatch
+
+EVENT DATE: 2024-01-08
+EVENT TYPE: ETL BUG — STATEHOLIDAY ENCODING CHANGE
+AFFECTED FEATURE: StateHoliday
+AFFECTED SCENARIOS: holiday_mismatch
+
+Summary:
+On 2024-01-08 ERP system version 5.1 changed the StateHoliday column encoding
+in the FEIERT table from single-character codes (a, b, c) to verbose strings
+(public_holiday, easter_holiday, other_holiday). The ETL categorical mapper in
+rossmann-etl was not updated and does not recognise the new verbose strings.
+Unknown values are silently coerced to NaN. The model sees no public holidays,
+causing miscalibrated sales forecasts for holiday-adjacent weeks.
+
+Root cause detail:
+The StateHoliday feature encodes German public and school holidays using categorical
+codes: 0=no holiday, a=public holiday, b=Easter holiday, c=other holiday.
+After the ERP v5.1 upgrade on 2024-01-08, the FEIERT table uses verbose strings
+instead of single-char codes. The ETL mapper (rossmann-etl/transform/holiday_mapper.py)
+only recognises the original single-char codes and maps unknown strings to NaN.
+The model's category imputer fills NaN with 0 (no holiday), causing it to
+systematically under-forecast sales on public holidays and misflag holiday weeks.
+
+PSI analysis:
+Expected PSI for StateHoliday: greater than 0.25 (critical threshold exceeded).
+ETL encoding change date: 2024-01-08 (ERP v5.1 deployment).
+Effect: all public holiday weeks incorrectly treated as non-holiday periods.
+
+Actions required per Runbook RB-004:
+1. Check raw ERP extract: SELECT DISTINCT StateHoliday FROM FEIERT LIMIT 100.
+2. If values like public_holiday, easter_holiday appear: encoding has changed.
+3. Update ETL mapper in rossmann-etl/transform/holiday_mapper.py to add mappings:
+   public_holiday -> a, easter_holiday -> b, other_holiday -> c.
+4. Re-run ETL for the affected date range to backfill correct values.
+5. Validate: null rate in StateHoliday should return to less than 0.5%.
+6. Expected RMSPE after fix: return to baseline within 1 day of backfill.
+
+Model context:
+Training window: 2021-01-01 to 2023-09-01
+Validation RMSPE: 0.118
+SLA threshold: 0.15

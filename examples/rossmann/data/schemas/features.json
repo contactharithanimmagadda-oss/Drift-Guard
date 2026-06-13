@@ -1,0 +1,36 @@
+{
+  "schema_version": "feature_schema_v3",
+  "frozen_date": "2023-09-01",
+  "model": "SalesForecaster v3.1",
+  "features": [
+    {"name": "Store",                    "dtype": "int",   "nullable": false, "range": [1, 1115]},
+    {"name": "DayOfWeek",               "dtype": "int",   "nullable": false, "range": [1, 7]},
+    {"name": "year",                     "dtype": "int",   "nullable": false, "range": [2013, 2025]},
+    {"name": "month",                    "dtype": "int",   "nullable": false, "range": [1, 12]},
+    {"name": "week",                     "dtype": "int",   "nullable": false, "range": [1, 52]},
+    {"name": "day",                      "dtype": "int",   "nullable": false, "range": [1, 31]},
+    {"name": "Customers",               "dtype": "int",   "nullable": false, "range": [0, 7388]},
+    {"name": "Open",                     "dtype": "int",   "nullable": false, "allowed_values": [0, 1]},
+    {"name": "Promo",                    "dtype": "int",   "nullable": false, "allowed_values": [0, 1]},
+    {"name": "StateHoliday",            "dtype": "str",   "nullable": false, "allowed_values": ["0", "a", "b", "c"]},
+    {"name": "SchoolHoliday",           "dtype": "int",   "nullable": false, "allowed_values": [0, 1]},
+    {"name": "StoreType",               "dtype": "str",   "nullable": false, "allowed_values": ["a", "b", "c", "d"]},
+    {"name": "Assortment",              "dtype": "str",   "nullable": false, "allowed_values": ["a", "b", "c"]},
+    {"name": "CompetitionDistance",     "dtype": "float", "nullable": true,  "range": [20, 75860]},
+    {"name": "CompetitionOpenSinceMonth","dtype": "int",  "nullable": true,  "range": [1, 12]},
+    {"name": "CompetitionOpenSinceYear","dtype": "int",   "nullable": true,  "range": [1900, 2025]},
+    {"name": "competition_open",        "dtype": "float", "nullable": false, "range": [0, 1200]},
+    {"name": "Promo2",                  "dtype": "int",   "nullable": false, "allowed_values": [0, 1]},
+    {"name": "Promo2SinceWeek",         "dtype": "int",   "nullable": true,  "range": [1, 52]},
+    {"name": "Promo2SinceYear",         "dtype": "int",   "nullable": true,  "range": [2009, 2025]},
+    {"name": "promo_2_open",            "dtype": "float", "nullable": false, "range": [0, 800]},
+    {"name": "IsPromo2Month",           "dtype": "int",   "nullable": false, "allowed_values": [0, 1]}
+  ],
+  "label": {
+    "name": "Sales",
+    "dtype": "float",
+    "nullable": false,
+    "range": [0, 41551],
+    "note": "0 only when Open=0. Rows with Open=0 are filtered before scoring."
+  }
+}

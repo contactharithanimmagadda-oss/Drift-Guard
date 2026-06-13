@@ -1,0 +1,147 @@
+# ┌──────────────────────────────────────────────────────────────────────┐
+# │  examples/rossmann/driftguard.yaml                                   │
+# │                                                                      │
+# │  DriftGuard integration — Rossmann Retail GmbH                       │
+# │  Daily sales forecaster, Germany / EU retail estate                  │
+# │                                                                      │
+# │  Model: Random Forest Sales Regressor v3.1                           │
+# │  Metric: RMSPE (Root Mean Square Percentage Error)                   │
+# └──────────────────────────────────────────────────────────────────────┘
+
+project:
+  name:         "Rossmann Retail GmbH"
+  model_name:   "SalesForecaster v3.1"
+  model_type:   "regressor"
+  domain:       "Retail — Drug Store Sales Forecasting"
+  description:  >
+    Predicts daily store sales for 1,115 Rossmann drug stores across Germany
+    and 6 other European countries, 6 weeks ahead. Trained on Random Forest
+    with gradient-boosted blending. Primary driver features: Promo, DayOfWeek,
+    CompetitionDistance, StateHoliday, StoreType, Assortment, SchoolHoliday.
+
+data:
+  label_col: "Sales"
+  feature_cols:
+    - Store
+    - DayOfWeek
+    - year
+    - month
+    - week
+    - day
+    - Customers
+    - Open
+    - Promo
+    - StateHoliday
+    - SchoolHoliday
+    - StoreType
+    - Assortment
+    - CompetitionDistance
+    - CompetitionOpenSinceMonth
+    - CompetitionOpenSinceYear
+    - competition_open
+    - Promo2
+    - Promo2SinceWeek
+    - Promo2SinceYear
+    - promo_2_open
+    - IsPromo2Month
+
+  baseline_path:   "data/scenarios/{id}/baseline.csv"
+  production_path: "data/scenarios/{id}/production.csv"
+  schemas_dir:     "data/schemas"
+
+scenarios:
+  - id: promo_shift
+    label: "Promotional Calendar Shift"
+    description: >
+      Rossmann launched an extended Summer Sale campaign on 2024-06-01 that
+      was not in the training calendar. Promo=1 proportion jumped from ~40%
+      to ~78% across all stores. The model, trained on a 40 % promo baseline,
+      systematically over-predicts sales on non-promo days and under-predicts
+      the promo uplift at scale. SHAP shows Promo weight collapsing (PSI > 0.30).
+    rmse_baseline:   0.118
+    rmse_production: 0.198
+    baseline_path:   "data/scenarios/promo_shift/baseline.csv"
+    production_path: "data/scenarios/promo_shift/production.csv"
+
+  - id: competition_surge
+    label: "New Competitor Wave — DM Expansion"
+    description: >
+      DM Drogerie Markt opened 47 new stores near existing Rossmann clusters
+      in Q1 2024. CompetitionDistance median dropped from 820 m to 290 m for
+      ~35 % of stores. The model was trained on a high-distance distribution;
+      the new low-distance region is out-of-distribution, causing RMSPE to
+      spike on city-centre stores. CompetitionDistance PSI = 0.41.
+    rmse_baseline:   0.118
+    rmse_production: 0.231
+    baseline_path:   "data/scenarios/competition_surge/baseline.csv"
+    production_path: "data/scenarios/competition_surge/production.csv"
+
+  - id: etl_open_corruption
+    label: "ETL Open Column Corruption"
+    description: >
+      Data warehouse migration v4.2 (2024-03-15) changed the Open column
+      storage type from INT to BOOLEAN in the upstream ERP. The legacy ETL
+      adapter does not handle BOOLEAN → INT casting, injecting NaN into ~32 %
+      of Open values. The model imputes NaN as 0 (store closed), incorrectly
+      suppressing sales predictions for open stores. RMSPE collapses to worst
+      observed level. Open PSI = 0.55 (critical).
+    rmse_baseline:   0.118
+    rmse_production: 0.285
+    baseline_path:   "data/scenarios/etl_open_corruption/baseline.csv"
+    production_path: "data/scenarios/etl_open_corruption/production.csv"
+
+  - id: holiday_mismatch
+    label: "Holiday Calendar Encoding Mismatch"
+    description: >
+      ERP v5.1 (2024-01-08) changed StateHoliday encoding: 'a' (public holiday)
+      and 'b' (Easter) are now written as verbose strings ('public_holiday',
+      'easter_holiday') rather than single characters. The ETL categorical
+      mapper does not recognise the new strings and silently coerces them to NaN.
+      The model sees no public holidays, causing miscalibrated forecasts for
+      holiday-adjacent weeks. StateHoliday PSI = 0.28 (critical).
+    rmse_baseline:   0.118
+    rmse_production: 0.167
+    baseline_path:   "data/scenarios/holiday_mismatch/baseline.csv"
+    production_path: "data/scenarios/holiday_mismatch/production.csv"
+
+agent:
+  role_description: "an ML Operations expert for {project_name}"
+  task_description: >
+    Investigate why {model_name} has degraded in production and produce a
+    structured root cause analysis with a concrete remediation plan.
+  investigation_hint: >
+    The model predicts daily drug store sales (label: {label_col}).
+    Key business drivers are: Promo status, CompetitionDistance, StateHoliday,
+    StoreType, DayOfWeek, and SchoolHoliday. Focus your investigation on:
+    (1) whether the Promo distribution shifted relative to training,
+    (2) whether CompetitionDistance has changed for a subset of stores,
+    (3) whether any categorical column (Open, StateHoliday) contains unexpected
+        NaN values introduced by an ETL or schema change,
+    (4) whether a seasonal or calendar mismatch is present.
+  max_iterations: 15
+
+  # Dual-model architecture (same as SteelGuard reference implementation)
+  routing_model:   "llama-3.1-8b-instant"    # fast cheap routing
+  synthesis_model: "llama-3.3-70b-versatile"  # quality RCA synthesis
+  max_tokens: 2048
+
+knowledge:
+  lineage_docs:  "knowledge/lineage"
+  runbook_docs:  "knowledge/runbooks"
+  model_docs:    "knowledge/model_meta"
+  indexes_dir:   "indexes"
+
+monitoring:
+  psi_critical:            0.20   # flag for immediate investigation
+  psi_warn:                0.10   # flag for watch list
+  rmspe_sla:               0.14   # SLA — breach triggers agent auto-run
+  shap_collapse_threshold: -15.0  # % drop in a feature's mean |SHAP| value
+
+mlflow:
+  experiment_name: "Rossmann_DriftMonitoring"
+  tracking_uri: null   # set to your MLflow server URI in production
+
+ui:
+  page_title:   "DriftGuard — Rossmann Sales RCA"
+  sidebar_logo: null
+  accent_color: "#e11d48"   # Rossmann brand red

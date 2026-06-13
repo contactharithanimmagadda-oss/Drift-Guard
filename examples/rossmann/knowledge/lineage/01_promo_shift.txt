@@ -1,0 +1,41 @@
+Rossmann Sales Forecaster v3.1 — Lineage Event: Promotional Calendar Shift
+
+EVENT DATE: 2024-06-01
+EVENT TYPE: CAMPAIGN — PROMO DISTRIBUTION SHIFT
+AFFECTED FEATURE: Promo
+AFFECTED SCENARIOS: promo_shift
+
+Summary:
+On 2024-06-01 Rossmann launched an extended Summer Sale campaign across all
+1,115 stores. The Promo=1 rate jumped from the training baseline of approximately
+41% to approximately 78% in the production window. The SalesForecaster v3.1
+was trained on a 40-41% promo baseline using data from 2021 to 2023. The current
+78% promo rate is fully outside the training distribution.
+
+Root cause detail:
+The promotional calendar feature Promo is a binary flag (0=no promotion, 1=promotion).
+During training (2021-2023), approximately 40-41% of store-day rows had Promo=1.
+The Summer Sale campaign beginning 2024-06-01 raised this to 78% across all stores.
+The model systematically over-predicts sales on non-promo days (model expects fewer
+promo days than are occurring) and under-predicts the promo uplift at scale.
+
+PSI analysis:
+Expected PSI for Promo feature: greater than 0.30 (critical threshold exceeded).
+Training baseline Promo rate: ~41% (2021-2023 average).
+Production Promo rate: ~78% (June 2024 onward).
+Mean shift: approximately +98% increase in Promo=1 proportion.
+
+Actions required per Runbook RB-001:
+1. Pull current Promo rate from AKTDAT via ETL for last 7 days.
+2. Compare against training baseline Promo rate (~41%). Delta exceeds 15 pp threshold.
+3. Confirmed campaign launch 2024-06-01 — not an ETL error.
+4. Apply Promo-rate calibration post-processing (scale predictions by ratio) as interim fix.
+5. Schedule emergency retraining with data up to current week via rossmann-mlops/retrain DAG.
+6. Expected RMSPE after fix: return to baseline within 2 days of retrain deploy.
+
+Model context:
+Training window: 2021-01-01 to 2023-09-01
+Validation RMSPE: 0.118
+SLA threshold: 0.15
+Algorithm: Random Forest (n_estimators=500) + LightGBM blend
+Target: log1p(Sales), evaluated as RMSPE on inverse-transform

@@ -1,0 +1,40 @@
+Rossmann Sales Forecaster v3.1 — Lineage Event: Competitor Expansion
+
+EVENT DATE: 2024-01-01 (Q1 2024)
+EVENT TYPE: COMPETITION — DM DROGERIE MARKT EXPANSION WAVE
+AFFECTED FEATURE: CompetitionDistance
+AFFECTED SCENARIOS: competition_surge
+
+Summary:
+In Q1 2024 DM Drogerie Markt opened 47 new stores in locations near existing
+Rossmann store clusters. The CompetitionDistance median dropped from approximately
+820 m to approximately 290 m for about 35% of Rossmann stores (approximately 390
+out of 1,115 stores). The SalesForecaster v3.1 was trained on a high-distance
+distribution. The new low-distance region is out-of-distribution for the model.
+
+Root cause detail:
+The CompetitionDistance feature records the distance in metres to the nearest
+competitor store. During training (2021-2023) the median was approximately 820 m.
+After the DM expansion in Q1 2024, the median for affected stores dropped to
+approximately 290 m. The model has no training examples in the 200-400 m range
+for a large proportion of stores, causing systematic underestimation of the
+competitive suppression effect on sales.
+
+PSI analysis:
+Expected PSI for CompetitionDistance: greater than 0.40 (critical threshold exceeded).
+Training baseline CompetitionDistance median: ~820 m.
+Production CompetitionDistance median (affected stores): ~290 m.
+Number of affected stores: ~390 out of 1,115.
+
+Actions required per Runbook RB-002:
+1. Query WETTBEW for new competitor records with CompetitionOpenSinceYear = 2024.
+2. Identify affected store IDs (stores within 500 m of new competitors).
+3. For affected stores: temporarily use competitor-unaware fallback (historic average +/- promo factor).
+4. Tag affected stores for priority retraining with updated competition register.
+5. Notify Store Operations to flag underperforming stores for manual forecast review.
+6. Expected RMSPE after fix: approximately 4 weeks post-retrain for stabilisation.
+
+Model context:
+Training window: 2021-01-01 to 2023-09-01
+Validation RMSPE: 0.118
+SLA threshold: 0.15

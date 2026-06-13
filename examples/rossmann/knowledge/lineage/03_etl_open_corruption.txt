@@ -1,0 +1,42 @@
+Rossmann Sales Forecaster v3.1 — Lineage Event: ETL Open Column Corruption
+
+EVENT DATE: 2024-03-15
+EVENT TYPE: ETL BUG — OPEN COLUMN BOOLEAN CORRUPTION
+AFFECTED FEATURE: Open
+AFFECTED SCENARIOS: etl_open_corruption
+
+Summary:
+On 2024-03-15 a data warehouse migration to version 4.2 changed the Open column
+storage type from INT(1) to BOOLEAN in the upstream SAP Retail ERP system WBHIST
+table. The legacy ETL adapter (rossmann-etl service) does not handle the BOOLEAN
+to INT casting. This injects NaN into approximately 32% of Open values. The model
+imputes NaN as 0 (store closed), incorrectly suppressing sales predictions for
+stores that are actually open. RMSPE collapsed to the worst observed level.
+
+Root cause detail:
+The Open feature is a binary flag (1=store open, 0=store closed). After the ERP
+v4.2 migration on 2024-03-15, the ETL cast fails silently and writes NaN for rows
+where the BOOLEAN value is TRUE. The model's feature imputer fills NaN with 0
+(the median of a binary feature with many open stores). This means approximately
+32% of open-store rows are incorrectly treated as closed, causing the prediction
+service to output near-zero sales forecasts for open stores.
+
+PSI analysis:
+Expected PSI for Open: greater than 0.50 (critical threshold exceeded).
+ETL bug date: 2024-03-15 (ERP v4.2 deployment).
+NaN injection rate: approximately 32% of Open values.
+Effect: model predicts near-zero sales for ~32% of open stores.
+
+Actions required per Runbook RB-003:
+1. Check ETL logs: airflow logs rossmann_feature_daily — look for cast errors.
+2. Query feature store: SELECT COUNT(*) WHERE Open IS NULL for last 3 days.
+3. If null rate > 5%: IMMEDIATELY pause prediction service.
+4. Contact Data Engineering (Priya Nair, p.nair@rossmann.de) to deploy ETL hotfix.
+5. Hotfix: in rossmann-etl/transform/open_col.py, add pd.to_numeric(df['Open'], errors='coerce').fillna(1).
+6. Backfill missing predictions using fallback model once ETL is fixed.
+7. Expected RMSPE after fix: immediate return to baseline once null rows are removed.
+
+Model context:
+Training window: 2021-01-01 to 2023-09-01
+Validation RMSPE: 0.118
+SLA threshold: 0.15
